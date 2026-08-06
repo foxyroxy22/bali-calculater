@@ -41,6 +41,14 @@ const el = {
   exportBtn: document.getElementById('export-btn')
 };
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function formatIdr(value) {
   return `Rp ${Math.round(value).toLocaleString('id-ID')}`;
 }
@@ -139,8 +147,8 @@ function handleTaxModeChange(mode) {
 
 function renderLedger() {
   const filtered = filterByTab(entries, currentTab).filter((entry) => {
-    if (filterStart && entry.date < filterStart) return false;
-    if (filterEnd && entry.date > filterEnd) return false;
+    if (filterStart && entry.date.slice(0, 10) < filterStart) return false;
+    if (filterEnd && entry.date.slice(0, 10) > filterEnd) return false;
     return true;
   });
   const sorted = sortByDateDesc(filtered);
@@ -160,13 +168,13 @@ function renderLedgerItem(entry) {
 
   const header = document.createElement('div');
   header.className = 'ledger-item-header';
-  header.innerHTML = `<span>${entry.date.slice(0, 10)} ${entry.memo ? '· ' + entry.memo : ''}</span><span>${formatKrw(entry.total_krw)}</span>`;
+  header.innerHTML = `<span>${entry.date.slice(0, 10)} ${entry.memo ? '· ' + escapeHtml(entry.memo) : ''}</span><span>${formatKrw(entry.total_krw)}</span>`;
   header.addEventListener('click', () => container.classList.toggle('expanded'));
 
   const detail = document.createElement('div');
   detail.className = 'ledger-item-detail';
 
-  const itemsHtml = entry.items.map((item) => `<div>${item.name} — ${formatIdr(item.price_idr)}</div>`).join('');
+  const itemsHtml = entry.items.map((item) => `<div>${escapeHtml(item.name)} — ${formatIdr(item.price_idr)}</div>`).join('');
   const taxLabel = { none: '가격만', plus: '+', plusplus: '++' }[entry.tax_mode];
 
   const fxLabel = document.createElement('label');
@@ -286,6 +294,7 @@ el.serviceRateInput.addEventListener('input', (e) => {
 });
 el.fxRateInput.addEventListener('input', (e) => {
   currentFxRate = Number(e.target.value) || 0;
+  saveLastRate(currentTab, currentFxRate);
   recalcAndRenderTotals();
 });
 el.addItemBtn.addEventListener('click', () => {
