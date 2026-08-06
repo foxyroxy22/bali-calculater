@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>발리 경비 계산기</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="tabs">
+      <button class="tab-btn active" data-tab="shared">같이</button>
+      <button class="tab-btn" data-tab="personal">개인</button>
+    </header>
+
+    <nav class="view-switch">
+      <button class="view-btn active" data-view="calculator">계산기</button>
+      <button class="view-btn" data-view="ledger">가계부</button>
+    </nav>
+
+    <main>
+      <section id="calculator-view" class="view active">
+        <div class="tax-mode-toggle">
+          <button class="tax-mode-btn active" data-mode="none">가격만</button>
+          <button class="tax-mode-btn" data-mode="plus">+</button>
+          <button class="tax-mode-btn" data-mode="plusplus">++</button>
+        </div>
+
+        <div class="rate-inputs">
+          <label>세금 %<input type="number" id="tax-rate-input" min="0" step="0.1"></label>
+          <label>서비스차지 %<input type="number" id="service-rate-input" min="0" step="0.1" disabled></label>
+        </div>
+
+        <div class="fx-input">
+          <label>환율 (100루피아 = 원)<input type="number" id="fx-rate-input" min="0" step="0.01"></label>
+        </div>
+
+        <div id="items-list" class="items-list"></div>
+        <button id="add-item-btn" class="btn-outline">+ 메뉴 추가</button>
+
+        <div class="totals">
+          <div class="totals-row"><span>소계</span><span id="subtotal-display">Rp 0</span></div>
+          <div class="totals-row"><span>추가요금</span><span id="extra-display">Rp 0</span></div>
+          <div class="totals-row total-final"><span>총액</span><span id="total-idr-display">Rp 0</span></div>
+          <div class="totals-row total-krw"><span>원화 총액</span><span id="total-krw-display">₩0</span></div>
+        </div>
+
+        <label>메모(선택)<input type="text" id="memo-input" placeholder="예: 우붓 맛집"></label>
+
+        <button id="save-entry-btn" class="btn-primary" disabled>저장하기</button>
+      </section>
+
+      <section id="ledger-view" class="view">
+        <div class="ledger-summary">
+          <span id="ledger-summary-idr">Rp 0</span>
+          <span id="ledger-summary-krw">₩0</span>
+        </div>
+        <div class="date-filter">
+          <input type="date" id="filter-start-date">
+          <input type="date" id="filter-end-date">
+        </div>
+        <div id="ledger-list" class="ledger-list"></div>
+      </section>
+    </main>
+
+    <button id="export-btn" class="btn-outline export-btn">내보내기 (JSON)</button>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
