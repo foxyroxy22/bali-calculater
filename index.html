@@ -30,6 +30,10 @@
           <label>환율 (100루피아 = 원)<input type="number" id="fx-rate-input" min="0" step="0.01"></label>
         </div>
 
+        <div class="date-input">
+          <label>날짜<input type="date" id="date-input"></label>
+        </div>
+
         <div id="items-list" class="items-list"></div>
         <button id="add-item-btn" class="btn-outline">+ 메뉴 추가</button>
 
@@ -40,23 +44,31 @@
           <div class="totals-row total-krw"><span>원화 총액</span><span id="total-krw-display">₩0</span></div>
         </div>
 
-        <label>메모(선택)<input type="text" id="memo-input" placeholder="예: 우붓 맛집"></label>
+        <label class="memo-field">메모<input type="text" id="memo-input" placeholder="예: 우붓 맛집"></label>
 
         <button id="save-entry-btn" class="btn-primary" disabled>저장하기</button>
       </section>
 
       <section id="ledger-view" class="view">
+        <div class="date-nav">
+          <button id="date-prev-btn" class="date-nav-btn" aria-label="이전 날짜">‹</button>
+          <span id="ledger-current-date" class="date-nav-label"></span>
+          <button id="date-next-btn" class="date-nav-btn" aria-label="다음 날짜">›</button>
+        </div>
+
+        <div id="ledger-list" class="ledger-list"></div>
+
         <div class="ledger-summary">
           <span id="ledger-summary-idr">Rp 0</span>
           <span id="ledger-summary-krw">₩0</span>
         </div>
-        <div class="date-filter">
-          <input type="date" id="filter-start-date">
-          <input type="date" id="filter-end-date">
+
+        <button id="export-btn" class="btn-outline">내보내기</button>
+        <div id="export-panel" class="export-panel" hidden>
+          <div id="export-date-list" class="export-date-list"></div>
+          <button id="export-confirm-btn" class="btn-primary">선택한 날짜 내보내기</button>
         </div>
-        <div id="ledger-list" class="ledger-list"></div>
       </section>
-      <button id="export-btn" class="btn-outline export-btn">내보내기 (JSON)</button>
     </main>
 
     <nav class="tabs">

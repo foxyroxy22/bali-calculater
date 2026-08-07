@@ -14,14 +14,14 @@ let currentTaxMode = 'none';
 let { tax_rate: currentTaxRate, service_rate: currentServiceRate } = loadLastTaxRates();
 let currentFxRate = loadLastRate(currentTab);
 let editingEntryId = null;
-let filterStart = '';
-let filterEnd = '';
+let selectedDate = todayDateStr();
 
 const el = {
   taxModeButtons: document.querySelectorAll('.tax-mode-btn'),
   taxRateInput: document.getElementById('tax-rate-input'),
   serviceRateInput: document.getElementById('service-rate-input'),
   fxRateInput: document.getElementById('fx-rate-input'),
+  dateInput: document.getElementById('date-input'),
   itemsList: document.getElementById('items-list'),
   addItemBtn: document.getElementById('add-item-btn'),
   memoInput: document.getElementById('memo-input'),
@@ -36,9 +36,13 @@ const el = {
   ledgerList: document.getElementById('ledger-list'),
   ledgerSummaryIdr: document.getElementById('ledger-summary-idr'),
   ledgerSummaryKrw: document.getElementById('ledger-summary-krw'),
-  filterStartInput: document.getElementById('filter-start-date'),
-  filterEndInput: document.getElementById('filter-end-date'),
-  exportBtn: document.getElementById('export-btn')
+  ledgerCurrentDate: document.getElementById('ledger-current-date'),
+  datePrevBtn: document.getElementById('date-prev-btn'),
+  dateNextBtn: document.getElementById('date-next-btn'),
+  exportBtn: document.getElementById('export-btn'),
+  exportPanel: document.getElementById('export-panel'),
+  exportDateList: document.getElementById('export-date-list'),
+  exportConfirmBtn: document.getElementById('export-confirm-btn')
 };
 
 function escapeHtml(value) {
@@ -55,6 +59,24 @@ function formatIdr(value) {
 
 function formatKrw(value) {
   return `₩${Math.round(value).toLocaleString('ko-KR')}`;
+}
+
+function todayDateStr() {
+  return dateToStr(new Date());
+}
+
+function dateToStr(d) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function shiftDateStr(dateStr, deltaDays) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + deltaDays);
+  return dateToStr(dt);
 }
 
 function renderItemsList() {
@@ -117,6 +139,7 @@ function resetCalculatorDraft() {
   el.taxModeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === 'none'));
   el.serviceRateInput.disabled = true;
   el.memoInput.value = '';
+  el.dateInput.value = todayDateStr();
   el.saveBtn.textContent = '저장하기';
   currentFxRate = loadLastRate(currentTab);
   el.fxRateInput.value = currentFxRate;
@@ -146,44 +169,66 @@ function handleTaxModeChange(mode) {
 }
 
 function renderLedger() {
-  const filtered = filterByTab(entries, currentTab).filter((entry) => {
-    if (filterStart && entry.date.slice(0, 10) < filterStart) return false;
-    if (filterEnd && entry.date.slice(0, 10) > filterEnd) return false;
-    return true;
-  });
-  const sorted = sortByDateDesc(filtered);
-  const { total_idr, total_krw } = sumTotals(filtered);
-  el.ledgerSummaryIdr.textContent = formatIdr(total_idr);
-  el.ledgerSummaryKrw.textContent = formatKrw(total_krw);
+  el.ledgerCurrentDate.textContent = selectedDate;
+
+  const tabEntries = filterByTab(entries, currentTab);
+  const dayEntries = tabEntries.filter((entry) => entry.date.slice(0, 10) === selectedDate);
+  const sorted = sortByDateDesc(dayEntries);
 
   el.ledgerList.innerHTML = '';
   sorted.forEach((entry) => {
     el.ledgerList.appendChild(renderLedgerItem(entry));
   });
+
+  const { total_idr, total_krw } = sumTotals(tabEntries);
+  el.ledgerSummaryIdr.textContent = formatIdr(total_idr);
+  el.ledgerSummaryKrw.textContent = formatKrw(total_krw);
+
+  el.exportPanel.hidden = true;
 }
 
 function renderLedgerItem(entry) {
   const container = document.createElement('div');
   container.className = 'ledger-item';
 
+  const itemNames = entry.items.length
+    ? entry.items.map((item) => escapeHtml(item.name || '(이름 없음)')).join(', ')
+    : '메뉴 없음';
+
   const header = document.createElement('div');
   header.className = 'ledger-item-header';
-  header.innerHTML = `<span>${entry.date.slice(0, 10)} ${entry.memo ? '· ' + escapeHtml(entry.memo) : ''}</span><span>${formatKrw(entry.total_krw)}</span>`;
+  header.innerHTML = `
+    <div class="ledger-item-title">
+      <div class="ledger-item-name">${itemNames}</div>
+      ${entry.memo ? `<div class="ledger-item-memo">${escapeHtml(entry.memo)}</div>` : ''}
+    </div>
+    <div class="ledger-item-amounts">
+      <div class="ledger-item-idr">${formatIdr(entry.total_idr)}</div>
+      <div class="ledger-item-krw">${formatKrw(entry.total_krw)}</div>
+    </div>
+  `;
   header.addEventListener('click', () => container.classList.toggle('expanded'));
 
   const detail = document.createElement('div');
   detail.className = 'ledger-item-detail';
 
-  const itemsHtml = entry.items.map((item) => `<div>${escapeHtml(item.name)} — ${formatIdr(item.price_idr)}</div>`).join('');
   const taxLabel = { none: '가격만', plus: '+', plusplus: '++' }[entry.tax_mode];
+  const itemsHtml = entry.items
+    .map((item) => `<div>${escapeHtml(item.name)} — ${formatIdr(item.price_idr)}</div>`)
+    .join('');
 
-  const fxLabel = document.createElement('label');
-  fxLabel.textContent = '환율 (100Rp=원) ';
-  const fxInput = document.createElement('input');
-  fxInput.type = 'number';
-  fxInput.min = '0';
-  fxInput.step = '0.01';
-  fxInput.value = entry.fx_rate_snapshot;
+  const detailRow = document.createElement('div');
+  detailRow.className = 'detail-row';
+
+  const tags = document.createElement('div');
+  tags.className = 'detail-tags';
+  tags.innerHTML = `
+    ${entry.memo ? `<span class="tag">${escapeHtml(entry.memo)}</span>` : ''}
+    <span class="tag">${taxLabel} (세금 ${entry.tax_rate}% / 서비스 ${entry.service_rate}%)</span>
+    <span class="tag tag-fx">환율 100Rp = <input type="number" class="tag-fx-input" min="0" step="0.01" value="${entry.fx_rate_snapshot}">원</span>
+  `;
+  const fxInput = tags.querySelector('.tag-fx-input');
+  fxInput.addEventListener('click', (e) => e.stopPropagation());
   fxInput.addEventListener('change', (e) => {
     const parsed = Number(e.target.value);
     const rate = Number.isFinite(parsed) && parsed >= 0 ? parsed : entry.fx_rate_snapshot;
@@ -191,18 +236,23 @@ function renderLedgerItem(entry) {
     saveEntries(entries);
     renderLedger();
   });
-  fxLabel.appendChild(fxInput);
+
+  const items = document.createElement('div');
+  items.className = 'detail-items';
+  items.innerHTML = itemsHtml;
+
+  detailRow.append(tags, items);
 
   const actions = document.createElement('div');
   actions.className = 'ledger-item-actions';
 
   const editBtn = document.createElement('button');
-  editBtn.className = 'btn-outline';
+  editBtn.className = 'btn-edit';
   editBtn.textContent = '수정';
   editBtn.addEventListener('click', () => loadEntryIntoCalculator(entry));
 
   const deleteBtn = document.createElement('button');
-  deleteBtn.className = 'btn-outline';
+  deleteBtn.className = 'btn-delete';
   deleteBtn.textContent = '삭제';
   deleteBtn.addEventListener('click', () => {
     if (!confirm('이 항목을 삭제할까요?')) return;
@@ -212,8 +262,7 @@ function renderLedgerItem(entry) {
   });
 
   actions.append(editBtn, deleteBtn);
-  detail.innerHTML = `<div>${itemsHtml}</div><div>세금모드: ${taxLabel} (세금 ${entry.tax_rate}% / 서비스 ${entry.service_rate}%)</div>`;
-  detail.append(fxLabel, actions);
+  detail.append(detailRow, actions);
 
   container.append(header, detail);
   return container;
@@ -234,6 +283,7 @@ function loadEntryIntoCalculator(entry) {
   el.taxRateInput.value = currentTaxRate;
   el.serviceRateInput.value = currentServiceRate;
   el.fxRateInput.value = currentFxRate;
+  el.dateInput.value = entry.date.slice(0, 10);
   el.memoInput.value = entry.memo;
   el.saveBtn.textContent = '수정 저장';
 
@@ -243,9 +293,7 @@ function loadEntryIntoCalculator(entry) {
 }
 
 function handleSaveEntry() {
-  const date = editingEntryId
-    ? entries.find((entry) => entry.id === editingEntryId).date
-    : new Date().toISOString();
+  const date = el.dateInput.value || todayDateStr();
 
   const payload = {
     tab_type: currentTab,
@@ -267,18 +315,43 @@ function handleSaveEntry() {
   saveLastRate(currentTab, currentFxRate);
   saveLastTaxRates(currentTaxRate, currentServiceRate);
 
+  selectedDate = date;
   resetCalculatorDraft();
   switchView('ledger');
 }
 
-function handleExport() {
-  const blob = new Blob([JSON.stringify({ entries }, null, 2)], { type: 'application/json' });
+function renderExportPanel() {
+  const tabEntries = filterByTab(entries, currentTab);
+  const dates = [...new Set(tabEntries.map((entry) => entry.date.slice(0, 10)))].sort().reverse();
+
+  el.exportDateList.innerHTML = '';
+  dates.forEach((date) => {
+    const label = document.createElement('label');
+    label.className = 'export-date-row';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = date;
+    checkbox.checked = true;
+
+    label.append(checkbox, document.createTextNode(' ' + date));
+    el.exportDateList.appendChild(label);
+  });
+}
+
+function handleExportConfirm() {
+  const checkedDates = [...el.exportDateList.querySelectorAll('input:checked')].map((cb) => cb.value);
+  const tabEntries = filterByTab(entries, currentTab);
+  const selected = tabEntries.filter((entry) => checkedDates.includes(entry.date.slice(0, 10)));
+
+  const blob = new Blob([JSON.stringify({ entries: selected }, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `bali-expenses-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `bali-expenses-${currentTab}-${todayDateStr()}.json`;
   link.click();
   URL.revokeObjectURL(url);
+  el.exportPanel.hidden = true;
 }
 
 el.tabButtons.forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
@@ -303,12 +376,24 @@ el.addItemBtn.addEventListener('click', () => {
   recalcAndRenderTotals();
 });
 el.saveBtn.addEventListener('click', handleSaveEntry);
-el.filterStartInput.addEventListener('change', (e) => { filterStart = e.target.value; renderLedger(); });
-el.filterEndInput.addEventListener('change', (e) => { filterEnd = e.target.value; renderLedger(); });
-el.exportBtn.addEventListener('click', handleExport);
+el.datePrevBtn.addEventListener('click', () => {
+  selectedDate = shiftDateStr(selectedDate, -1);
+  renderLedger();
+});
+el.dateNextBtn.addEventListener('click', () => {
+  selectedDate = shiftDateStr(selectedDate, 1);
+  renderLedger();
+});
+el.exportBtn.addEventListener('click', () => {
+  const opening = el.exportPanel.hidden;
+  if (opening) renderExportPanel();
+  el.exportPanel.hidden = !opening;
+});
+el.exportConfirmBtn.addEventListener('click', handleExportConfirm);
 
 el.taxRateInput.value = currentTaxRate;
 el.serviceRateInput.value = currentServiceRate;
 el.fxRateInput.value = currentFxRate;
+el.dateInput.value = todayDateStr();
 renderItemsList();
 recalcAndRenderTotals();
