@@ -293,6 +293,25 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
   text-align: center;
 }
 
+.ledger-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-sm);
+}
+
+.btn-link {
+  border: none;
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-link:active { opacity: 0.5; }
+
 .ledger-summary {
   display: flex;
   justify-content: space-between;
@@ -302,6 +321,8 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
   margin-bottom: var(--space-md);
   font-weight: 700;
 }
+
+.ledger-summary[hidden] { display: none; }
 
 .ledger-item {
   background: var(--color-canvas);
@@ -425,12 +446,47 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
 
 .btn-delete:active { opacity: 0.7; }
 
+.export-widget {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 440px;
+  bottom: calc(env(safe-area-inset-bottom) + 88px + var(--space-md));
+  pointer-events: none;
+  z-index: 15;
+}
+
+.export-fab {
+  position: absolute;
+  right: var(--space-md);
+  bottom: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-btn);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.export-fab:active { opacity: 0.5; }
+
 .export-panel {
-  margin-top: calc(-1 * var(--space-md));
-  margin-bottom: var(--space-md);
+  position: absolute;
+  right: var(--space-md);
+  bottom: 68px;
+  width: 240px;
   padding: var(--space-md);
-  background: var(--color-panel);
+  background: var(--color-canvas);
   border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  pointer-events: auto;
 }
 
 .export-date-list {
@@ -438,6 +494,8 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
   flex-direction: column;
   gap: var(--space-xs);
   margin-bottom: var(--space-md);
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .export-date-row {

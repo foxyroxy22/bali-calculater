@@ -42,7 +42,11 @@ const el = {
   exportBtn: document.getElementById('export-btn'),
   exportPanel: document.getElementById('export-panel'),
   exportDateList: document.getElementById('export-date-list'),
-  exportConfirmBtn: document.getElementById('export-confirm-btn')
+  exportConfirmBtn: document.getElementById('export-confirm-btn'),
+  grandTotalBtn: document.getElementById('grand-total-btn'),
+  grandTotalPanel: document.getElementById('grand-total-panel'),
+  grandTotalIdr: document.getElementById('grand-total-idr'),
+  grandTotalKrw: document.getElementById('grand-total-krw')
 };
 
 function escapeHtml(value) {
@@ -180,11 +184,16 @@ function renderLedger() {
     el.ledgerList.appendChild(renderLedgerItem(entry));
   });
 
-  const { total_idr, total_krw } = sumTotals(tabEntries);
+  const { total_idr, total_krw } = sumTotals(dayEntries);
   el.ledgerSummaryIdr.textContent = formatIdr(total_idr);
   el.ledgerSummaryKrw.textContent = formatKrw(total_krw);
 
+  const grandTotal = sumTotals(tabEntries);
+  el.grandTotalIdr.textContent = formatIdr(grandTotal.total_idr);
+  el.grandTotalKrw.textContent = formatKrw(grandTotal.total_krw);
+
   el.exportPanel.hidden = true;
+  el.grandTotalPanel.hidden = true;
 }
 
 function renderLedgerItem(entry) {
@@ -376,6 +385,9 @@ el.addItemBtn.addEventListener('click', () => {
   recalcAndRenderTotals();
 });
 el.saveBtn.addEventListener('click', handleSaveEntry);
+el.grandTotalBtn.addEventListener('click', () => {
+  el.grandTotalPanel.hidden = !el.grandTotalPanel.hidden;
+});
 el.datePrevBtn.addEventListener('click', () => {
   selectedDate = shiftDateStr(selectedDate, -1);
   renderLedger();

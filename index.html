@@ -56,6 +56,15 @@
           <button id="date-next-btn" class="date-nav-btn" aria-label="다음 날짜">›</button>
         </div>
 
+        <div class="ledger-toolbar">
+          <button id="grand-total-btn" class="btn-link">전체보기</button>
+        </div>
+
+        <div id="grand-total-panel" class="ledger-summary" hidden>
+          <span id="grand-total-idr">Rp 0</span>
+          <span id="grand-total-krw">₩0</span>
+        </div>
+
         <div id="ledger-list" class="ledger-list"></div>
 
         <div class="ledger-summary">
@@ -63,10 +72,18 @@
           <span id="ledger-summary-krw">₩0</span>
         </div>
 
-        <button id="export-btn" class="btn-outline">내보내기</button>
-        <div id="export-panel" class="export-panel" hidden>
-          <div id="export-date-list" class="export-date-list"></div>
-          <button id="export-confirm-btn" class="btn-primary">선택한 날짜 내보내기</button>
+        <div class="export-widget">
+          <div id="export-panel" class="export-panel" hidden>
+            <div id="export-date-list" class="export-date-list"></div>
+            <button id="export-confirm-btn" class="btn-primary">선택한 날짜 내보내기</button>
+          </div>
+          <button id="export-btn" class="export-fab" aria-label="내보내기">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3v12" />
+              <path d="M7 10l5 5 5-5" />
+              <path d="M5 21h14" />
+            </svg>
+          </button>
         </div>
       </section>
     </main>
