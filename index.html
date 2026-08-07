@@ -57,12 +57,11 @@
         </div>
 
         <div class="ledger-toolbar">
-          <button id="grand-total-btn" class="btn-link">전체보기</button>
-        </div>
-
-        <div id="grand-total-panel" class="ledger-summary" hidden>
-          <span id="grand-total-idr">Rp 0</span>
-          <span id="grand-total-krw">₩0</span>
+          <label class="switch-field">
+            전체보기
+            <input type="checkbox" id="show-all-toggle" class="switch-input">
+            <span class="switch-track"><span class="switch-thumb"></span></span>
+          </label>
         </div>
 
         <div id="ledger-list" class="ledger-list"></div>

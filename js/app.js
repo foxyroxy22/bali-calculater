@@ -15,6 +15,7 @@ let { tax_rate: currentTaxRate, service_rate: currentServiceRate } = loadLastTax
 let currentFxRate = loadLastRate(currentTab);
 let editingEntryId = null;
 let selectedDate = todayDateStr();
+let showAllDates = false;
 
 const el = {
   taxModeButtons: document.querySelectorAll('.tax-mode-btn'),
@@ -43,10 +44,7 @@ const el = {
   exportPanel: document.getElementById('export-panel'),
   exportDateList: document.getElementById('export-date-list'),
   exportConfirmBtn: document.getElementById('export-confirm-btn'),
-  grandTotalBtn: document.getElementById('grand-total-btn'),
-  grandTotalPanel: document.getElementById('grand-total-panel'),
-  grandTotalIdr: document.getElementById('grand-total-idr'),
-  grandTotalKrw: document.getElementById('grand-total-krw')
+  showAllToggle: document.getElementById('show-all-toggle')
 };
 
 function escapeHtml(value) {
@@ -173,30 +171,35 @@ function handleTaxModeChange(mode) {
 }
 
 function renderLedger() {
-  el.ledgerCurrentDate.textContent = selectedDate;
+  el.datePrevBtn.classList.toggle('hidden', showAllDates);
+  el.dateNextBtn.classList.toggle('hidden', showAllDates);
 
   const tabEntries = filterByTab(entries, currentTab);
-  const dayEntries = tabEntries.filter((entry) => entry.date.slice(0, 10) === selectedDate);
-  const sorted = sortByDateDesc(dayEntries);
+  const displayed = showAllDates
+    ? tabEntries
+    : tabEntries.filter((entry) => entry.date.slice(0, 10) === selectedDate);
 
+  if (showAllDates) {
+    const dates = displayed.map((entry) => entry.date.slice(0, 10)).sort();
+    el.ledgerCurrentDate.textContent = dates.length ? `${dates[0]} ~ ${dates[dates.length - 1]}` : '전체 기간';
+  } else {
+    el.ledgerCurrentDate.textContent = selectedDate;
+  }
+
+  const sorted = sortByDateDesc(displayed);
   el.ledgerList.innerHTML = '';
   sorted.forEach((entry) => {
-    el.ledgerList.appendChild(renderLedgerItem(entry));
+    el.ledgerList.appendChild(renderLedgerItem(entry, showAllDates));
   });
 
-  const { total_idr, total_krw } = sumTotals(dayEntries);
+  const { total_idr, total_krw } = sumTotals(displayed);
   el.ledgerSummaryIdr.textContent = formatIdr(total_idr);
   el.ledgerSummaryKrw.textContent = formatKrw(total_krw);
 
-  const grandTotal = sumTotals(tabEntries);
-  el.grandTotalIdr.textContent = formatIdr(grandTotal.total_idr);
-  el.grandTotalKrw.textContent = formatKrw(grandTotal.total_krw);
-
   el.exportPanel.hidden = true;
-  el.grandTotalPanel.hidden = true;
 }
 
-function renderLedgerItem(entry) {
+function renderLedgerItem(entry, showDate) {
   const container = document.createElement('div');
   container.className = 'ledger-item';
 
@@ -208,6 +211,7 @@ function renderLedgerItem(entry) {
   header.className = 'ledger-item-header';
   header.innerHTML = `
     <div class="ledger-item-title">
+      ${showDate ? `<div class="ledger-item-date">${entry.date.slice(0, 10)}</div>` : ''}
       <div class="ledger-item-name">${itemNames}</div>
       ${entry.memo ? `<div class="ledger-item-memo">${escapeHtml(entry.memo)}</div>` : ''}
     </div>
@@ -385,8 +389,9 @@ el.addItemBtn.addEventListener('click', () => {
   recalcAndRenderTotals();
 });
 el.saveBtn.addEventListener('click', handleSaveEntry);
-el.grandTotalBtn.addEventListener('click', () => {
-  el.grandTotalPanel.hidden = !el.grandTotalPanel.hidden;
+el.showAllToggle.addEventListener('change', (e) => {
+  showAllDates = e.target.checked;
+  renderLedger();
 });
 el.datePrevBtn.addEventListener('click', () => {
   selectedDate = shiftDateStr(selectedDate, -1);
