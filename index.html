@@ -2,21 +2,16 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>발리 경비 계산기</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <div class="app">
-    <header class="tabs">
-      <button class="tab-btn active" data-tab="shared">같이</button>
-      <button class="tab-btn" data-tab="personal">개인</button>
-    </header>
-
-    <nav class="view-switch">
+    <header class="view-switch">
       <button class="view-btn active" data-view="calculator">계산기</button>
       <button class="view-btn" data-view="ledger">가계부</button>
-    </nav>
+    </header>
 
     <main>
       <section id="calculator-view" class="view active">
@@ -61,9 +56,13 @@
         </div>
         <div id="ledger-list" class="ledger-list"></div>
       </section>
+      <button id="export-btn" class="btn-outline export-btn">내보내기 (JSON)</button>
     </main>
 
-    <button id="export-btn" class="btn-outline export-btn">내보내기 (JSON)</button>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="shared">같이</button>
+      <button class="tab-btn" data-tab="personal">개인</button>
+    </nav>
   </div>
 
   <script type="module" src="js/app.js"></script>

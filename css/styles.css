@@ -26,20 +26,26 @@ body {
 }
 
 .app {
-  max-width: 480px;
+  max-width: 440px;
+  width: 100%;
   margin: 0 auto;
-  padding: var(--space-md);
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--color-canvas);
+  position: relative;
 }
 
-.tabs, .view-switch {
+.view-switch {
   display: flex;
   gap: var(--space-xs);
-  margin-bottom: var(--space-md);
+  padding: calc(env(safe-area-inset-top) + var(--space-sm)) var(--space-md) var(--space-sm);
+  position: sticky;
+  top: 0;
+  background: var(--color-canvas);
+  z-index: 10;
 }
 
-.tab-btn, .view-btn {
+.view-btn {
   flex: 1;
   padding: var(--space-sm);
   border: none;
@@ -48,10 +54,49 @@ body {
   color: var(--color-muted);
   font-weight: 700;
   font-size: 16px;
+  min-height: 44px;
   cursor: pointer;
 }
 
-.tab-btn.active, .view-btn.active {
+.view-btn.active {
+  background: var(--color-primary);
+  color: var(--color-fg);
+}
+
+main {
+  padding: 0 var(--space-md);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md) calc(env(safe-area-inset-bottom) + var(--space-sm));
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 440px;
+  background: var(--color-canvas);
+  border-top: 1px solid var(--color-border);
+  z-index: 10;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: var(--space-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-panel);
+  color: var(--color-muted);
+  font-weight: 700;
+  font-size: 16px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.tab-btn.active {
   background: var(--color-primary);
   color: var(--color-fg);
 }
@@ -68,6 +113,7 @@ body {
 .tax-mode-btn {
   flex: 1;
   padding: var(--space-xs);
+  min-height: 44px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-canvas);
@@ -87,11 +133,17 @@ body {
 
 .rate-inputs label, .fx-input label {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   font-size: 14px;
   color: var(--color-muted);
   gap: 4px;
+}
+
+.rate-inputs input, .fx-input input {
+  width: 100%;
+  min-width: 0;
 }
 
 input[type="number"], input[type="text"], input[type="date"] {
