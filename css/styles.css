@@ -88,11 +88,11 @@ main {
   width: 100%;
   max-width: 440px;
   background: var(--color-canvas);
-  border-top: 1px solid var(--color-border);
   z-index: 10;
 }
 
 .tab-btn {
+  position: relative;
   flex: 1;
   padding: var(--space-sm) 0;
   border: none;
@@ -108,6 +108,18 @@ main {
 .tab-btn.active {
   background: transparent;
   color: var(--color-primary);
+}
+
+.tab-btn.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--color-primary);
 }
 
 .tab-btn:active { opacity: 0.5; }
@@ -508,25 +520,54 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
 
 .export-fab:active { opacity: 0.5; }
 
-.export-panel {
-  position: absolute;
-  right: var(--space-md);
-  bottom: 68px;
-  width: 240px;
-  padding: var(--space-md);
-  background: var(--color-canvas);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  pointer-events: auto;
+.export-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 20;
 }
+
+.export-overlay[hidden] { display: none; }
+
+.export-modal {
+  width: 100%;
+  max-width: 440px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--color-canvas);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-lg) var(--space-md) calc(env(safe-area-inset-bottom) + var(--space-lg));
+}
+
+.export-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+}
+
+.btn-link-sm {
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-link-sm:active { opacity: 0.5; }
 
 .export-date-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   margin-bottom: var(--space-md);
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .export-date-row {
@@ -534,4 +575,10 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
   align-items: center;
   gap: var(--space-xs);
   font-size: 14px;
+}
+
+.export-date-count {
+  margin-left: auto;
+  color: var(--color-muted-light);
+  font-size: 13px;
 }

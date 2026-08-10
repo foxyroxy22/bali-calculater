@@ -41,11 +41,15 @@ const el = {
   datePrevBtn: document.getElementById('date-prev-btn'),
   dateNextBtn: document.getElementById('date-next-btn'),
   exportBtn: document.getElementById('export-btn'),
-  exportPanel: document.getElementById('export-panel'),
+  exportOverlay: document.getElementById('export-overlay'),
   exportDateList: document.getElementById('export-date-list'),
   exportConfirmBtn: document.getElementById('export-confirm-btn'),
+  exportSelectAllBtn: document.getElementById('export-select-all-btn'),
   showAllToggle: document.getElementById('show-all-toggle')
 };
+
+const TRIP_START_DATE = '2026-08-14';
+const TRIP_END_DATE = '2026-08-22';
 
 function escapeHtml(value) {
   return String(value)
@@ -196,7 +200,7 @@ function renderLedger() {
   el.ledgerSummaryIdr.textContent = formatIdr(total_idr);
   el.ledgerSummaryKrw.textContent = formatKrw(total_krw);
 
-  el.exportPanel.hidden = true;
+  el.exportOverlay.hidden = true;
 }
 
 function renderLedgerItem(entry, showDate) {
@@ -333,12 +337,28 @@ function handleSaveEntry() {
   switchView('ledger');
 }
 
+function tripDateRange() {
+  const dates = [];
+  let cursor = TRIP_START_DATE;
+  while (cursor <= TRIP_END_DATE) {
+    dates.push(cursor);
+    cursor = shiftDateStr(cursor, 1);
+  }
+  return dates;
+}
+
 function renderExportPanel() {
   const tabEntries = filterByTab(entries, currentTab);
-  const dates = [...new Set(tabEntries.map((entry) => entry.date.slice(0, 10)))].sort().reverse();
+  const tripDates = tripDateRange();
+  const extraDates = [...new Set(tabEntries.map((entry) => entry.date.slice(0, 10)))]
+    .filter((date) => !tripDates.includes(date))
+    .sort();
+  const dates = [...tripDates, ...extraDates];
 
   el.exportDateList.innerHTML = '';
   dates.forEach((date) => {
+    const count = tabEntries.filter((entry) => entry.date.slice(0, 10) === date).length;
+
     const label = document.createElement('label');
     label.className = 'export-date-row';
 
@@ -347,7 +367,11 @@ function renderExportPanel() {
     checkbox.value = date;
     checkbox.checked = true;
 
-    label.append(checkbox, document.createTextNode(' ' + date));
+    const countSpan = document.createElement('span');
+    countSpan.className = 'export-date-count';
+    countSpan.textContent = count ? `${count}건` : '없음';
+
+    label.append(checkbox, document.createTextNode(' ' + date + ' '), countSpan);
     el.exportDateList.appendChild(label);
   });
 }
@@ -364,7 +388,7 @@ function handleExportConfirm() {
   link.download = `bali-expenses-${currentTab}-${todayDateStr()}.json`;
   link.click();
   URL.revokeObjectURL(url);
-  el.exportPanel.hidden = true;
+  el.exportOverlay.hidden = true;
 }
 
 el.tabButtons.forEach((btn) => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
@@ -402,9 +426,14 @@ el.dateNextBtn.addEventListener('click', () => {
   renderLedger();
 });
 el.exportBtn.addEventListener('click', () => {
-  const opening = el.exportPanel.hidden;
-  if (opening) renderExportPanel();
-  el.exportPanel.hidden = !opening;
+  renderExportPanel();
+  el.exportOverlay.hidden = false;
+});
+el.exportOverlay.addEventListener('click', (e) => {
+  if (e.target === el.exportOverlay) el.exportOverlay.hidden = true;
+});
+el.exportSelectAllBtn.addEventListener('click', () => {
+  el.exportDateList.querySelectorAll('input[type="checkbox"]').forEach((cb) => { cb.checked = true; });
 });
 el.exportConfirmBtn.addEventListener('click', handleExportConfirm);
 
