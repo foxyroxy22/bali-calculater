@@ -573,9 +573,36 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
 .export-date-row {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   font-size: 14px;
+  cursor: pointer;
 }
+
+.checkbox-input { display: none; }
+
+.checkbox-box {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: var(--color-canvas);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-on-primary);
+}
+
+.checkbox-check { opacity: 0; }
+
+.checkbox-input:checked + .checkbox-box {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checkbox-input:checked + .checkbox-box .checkbox-check { opacity: 1; }
+
+.export-date-label { font-weight: 700; }
 
 .export-date-count {
   margin-left: auto;

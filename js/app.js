@@ -364,14 +364,27 @@ function renderExportPanel() {
 
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
+    checkbox.className = 'checkbox-input';
     checkbox.value = date;
     checkbox.checked = true;
+
+    const box = document.createElement('span');
+    box.className = 'checkbox-box';
+    box.innerHTML = `
+      <svg class="checkbox-check" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+    `;
+
+    const dateLabel = document.createElement('span');
+    dateLabel.className = 'export-date-label';
+    dateLabel.textContent = date;
 
     const countSpan = document.createElement('span');
     countSpan.className = 'export-date-count';
     countSpan.textContent = count ? `${count}건` : '없음';
 
-    label.append(checkbox, document.createTextNode(' ' + date + ' '), countSpan);
+    label.append(checkbox, box, dateLabel, countSpan);
     el.exportDateList.appendChild(label);
   });
 }
