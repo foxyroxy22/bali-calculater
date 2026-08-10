@@ -24,6 +24,11 @@
   --shadow-card: 0px 1px 20px rgba(0, 0, 0, 0.07);
 }
 
+.app.theme-personal {
+  --color-primary: #ff7cd3;
+  --color-on-primary: #000000;
+}
+
 * { box-sizing: border-box; }
 
 body {

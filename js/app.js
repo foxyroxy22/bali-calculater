@@ -18,6 +18,7 @@ let selectedDate = todayDateStr();
 let showAllDates = false;
 
 const el = {
+  appRoot: document.querySelector('.app'),
   taxModeButtons: document.querySelectorAll('.tax-mode-btn'),
   taxRateInput: document.getElementById('tax-rate-input'),
   serviceRateInput: document.getElementById('service-rate-input'),
@@ -153,9 +154,14 @@ function resetCalculatorDraft() {
   recalcAndRenderTotals();
 }
 
+function applyTabTheme(tab) {
+  el.appRoot.classList.toggle('theme-personal', tab === 'personal');
+}
+
 function switchTab(tab) {
   currentTab = tab;
   el.tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === tab));
+  applyTabTheme(tab);
   resetCalculatorDraft();
   if (currentView === 'ledger') renderLedger();
 }
@@ -295,6 +301,7 @@ function loadEntryIntoCalculator(entry) {
   currentFxRate = entry.fx_rate_snapshot;
 
   el.tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === currentTab));
+  applyTabTheme(currentTab);
   el.taxModeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === currentTaxMode));
   el.serviceRateInput.disabled = currentTaxMode !== 'plusplus';
   el.taxRateInput.value = currentTaxRate;
