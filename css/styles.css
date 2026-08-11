@@ -247,14 +247,29 @@ main {
 
 .topup-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  background: var(--color-panel);
+  gap: var(--space-sm);
+  background: color-mix(in srgb, var(--color-primary) 12%, white);
+  border: 1px dashed var(--color-primary);
   border-radius: var(--radius-card);
   padding: var(--space-sm);
   margin-bottom: var(--space-sm);
-  border-left: 3px solid var(--color-primary);
 }
+
+.topup-item-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topup-item-info { flex: 1; min-width: 0; }
+.topup-item-side { text-align: right; }
 
 .topup-item-label {
   font-size: 13px;

@@ -277,11 +277,17 @@ function renderTopupItem(topup, showDate) {
   const dateLabel = showDate ? `${topup.date.slice(0, 10)} · 충전` : '충전';
 
   container.innerHTML = `
-    <div>
+    <div class="topup-item-icon">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 19V5" />
+        <path d="M6 11l6-6 6 6" />
+      </svg>
+    </div>
+    <div class="topup-item-info">
       <div class="topup-item-label">${escapeHtml(dateLabel)}</div>
       <div class="topup-item-amount">${formatIdr(topup.idr_amount)}</div>
     </div>
-    <div style="text-align: right">
+    <div class="topup-item-side">
       <div class="topup-item-amount">${formatKrw(topup.krw_amount)}</div>
       <div class="topup-item-label">100Rp = ${formatRate(rate)}원</div>
     </div>
