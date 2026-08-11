@@ -1,35 +1,34 @@
 const ENTRIES_KEY = 'bali_expense_entries';
+const TOPUPS_KEY = 'bali_expense_topups';
 const LAST_TAX_RATE_KEY = 'bali_expense_last_tax_rate';
 const LAST_SERVICE_RATE_KEY = 'bali_expense_last_service_rate';
 
-function lastRateKey(tabType) {
-  return `bali_expense_last_rate_${tabType}`;
-}
-
-export function loadEntries(storage = window.localStorage) {
-  const raw = storage.getItem(ENTRIES_KEY);
+function loadArray(key, storage) {
+  const raw = storage.getItem(key);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (err) {
-    console.error('failed to parse stored entries', err);
+    console.error(`failed to parse stored ${key}`, err);
     return [];
   }
+}
+
+export function loadEntries(storage = window.localStorage) {
+  return loadArray(ENTRIES_KEY, storage);
 }
 
 export function saveEntries(entries, storage = window.localStorage) {
   storage.setItem(ENTRIES_KEY, JSON.stringify(entries));
 }
 
-export function loadLastRate(tabType, storage = window.localStorage) {
-  const raw = storage.getItem(lastRateKey(tabType));
-  const parsed = raw === null ? NaN : Number(raw);
-  return Number.isFinite(parsed) ? parsed : 8.03;
+export function loadTopups(storage = window.localStorage) {
+  return loadArray(TOPUPS_KEY, storage);
 }
 
-export function saveLastRate(tabType, rate, storage = window.localStorage) {
-  storage.setItem(lastRateKey(tabType), String(rate));
+export function saveTopups(topups, storage = window.localStorage) {
+  storage.setItem(TOPUPS_KEY, JSON.stringify(topups));
 }
 
 export function loadLastTaxRates(storage = window.localStorage) {

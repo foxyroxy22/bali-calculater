@@ -189,6 +189,84 @@ main {
 
 .memo-field input { font-size: 16px; color: var(--color-fg); }
 
+.applied-rate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  background: var(--color-panel);
+  border-radius: var(--radius-card);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+
+.applied-rate-label {
+  font-size: 12px;
+  color: var(--color-muted-light);
+  margin-bottom: 2px;
+}
+
+.applied-rate-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-fg);
+}
+
+.applied-balance {
+  font-size: 13px;
+  color: var(--color-muted);
+  margin-bottom: var(--space-md);
+}
+
+.wallet-balance {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-fg);
+  margin-bottom: var(--space-sm);
+}
+
+.wallet-balance span:first-child { color: var(--color-muted); font-weight: 400; }
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  font-size: 14px;
+  color: var(--color-muted-light);
+  margin-bottom: var(--space-sm);
+}
+
+.modal-rate-preview {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+}
+
+.topup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-panel);
+  border-radius: var(--radius-card);
+  padding: var(--space-sm);
+  margin-bottom: var(--space-sm);
+  border-left: 3px solid var(--color-primary);
+}
+
+.topup-item-label {
+  font-size: 13px;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.topup-item-amount {
+  font-size: 15px;
+  font-weight: 700;
+}
+
 input[type="number"], input[type="text"], input[type="date"] {
   padding: var(--space-xs);
   border: 1px solid var(--color-border);

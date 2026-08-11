@@ -1,18 +1,24 @@
 import { computeTotals, convertToKrw } from './calc.js';
 import {
-  createEntry, addEntry, updateEntry, removeEntry, filterByTab, sortByDateDesc, sumTotals
+  createEntry, addEntry, updateEntry, removeEntry,
+  filterByTab as filterEntriesByTab, sortByDateDesc as sortEntriesByDateDesc, sumTotals
 } from './entries.js';
 import {
-  loadEntries, saveEntries, loadLastRate, saveLastRate, loadLastTaxRates, saveLastTaxRates
+  createTopup, addTopup,
+  filterByTab as filterTopupsByTab, sortByDateDesc as sortTopupsByDateDesc,
+  computeAverageRate, sumIdr
+} from './topups.js';
+import {
+  loadEntries, saveEntries, loadTopups, saveTopups, loadLastTaxRates, saveLastTaxRates
 } from './storage.js';
 
 let entries = loadEntries();
+let topups = loadTopups();
 let currentTab = 'shared';
 let currentView = 'calculator';
 let currentItems = [];
 let currentTaxMode = 'none';
 let { tax_rate: currentTaxRate, service_rate: currentServiceRate } = loadLastTaxRates();
-let currentFxRate = loadLastRate(currentTab);
 let editingEntryId = null;
 let selectedDate = todayDateStr();
 let showAllDates = false;
@@ -22,7 +28,9 @@ const el = {
   taxModeButtons: document.querySelectorAll('.tax-mode-btn'),
   taxRateInput: document.getElementById('tax-rate-input'),
   serviceRateInput: document.getElementById('service-rate-input'),
-  fxRateInput: document.getElementById('fx-rate-input'),
+  appliedRateDisplay: document.getElementById('applied-rate-display'),
+  appliedBalanceDisplay: document.getElementById('applied-balance-display'),
+  addTopupBtn: document.getElementById('add-topup-btn'),
   dateInput: document.getElementById('date-input'),
   itemsList: document.getElementById('items-list'),
   addItemBtn: document.getElementById('add-item-btn'),
@@ -39,14 +47,22 @@ const el = {
   ledgerSummaryIdr: document.getElementById('ledger-summary-idr'),
   ledgerSummaryKrw: document.getElementById('ledger-summary-krw'),
   ledgerCurrentDate: document.getElementById('ledger-current-date'),
+  walletBalanceIdr: document.getElementById('wallet-balance-idr'),
+  walletBalanceKrw: document.getElementById('wallet-balance-krw'),
   datePrevBtn: document.getElementById('date-prev-btn'),
   dateNextBtn: document.getElementById('date-next-btn'),
+  showAllToggle: document.getElementById('show-all-toggle'),
+  topupOverlay: document.getElementById('topup-overlay'),
+  topupDateInput: document.getElementById('topup-date-input'),
+  topupKrwInput: document.getElementById('topup-krw-input'),
+  topupIdrInput: document.getElementById('topup-idr-input'),
+  topupRatePreview: document.getElementById('topup-rate-preview'),
+  topupConfirmBtn: document.getElementById('topup-confirm-btn'),
   exportBtn: document.getElementById('export-btn'),
   exportOverlay: document.getElementById('export-overlay'),
   exportDateList: document.getElementById('export-date-list'),
   exportConfirmBtn: document.getElementById('export-confirm-btn'),
-  exportSelectAllBtn: document.getElementById('export-select-all-btn'),
-  showAllToggle: document.getElementById('show-all-toggle')
+  exportSelectAllBtn: document.getElementById('export-select-all-btn')
 };
 
 const TRIP_START_DATE = '2026-08-14';
@@ -68,6 +84,10 @@ function formatKrw(value) {
   return `₩${Math.round(value).toLocaleString('ko-KR')}`;
 }
 
+function formatRate(rate) {
+  return rate.toFixed(2);
+}
+
 function todayDateStr() {
   return dateToStr(new Date());
 }
@@ -84,6 +104,17 @@ function shiftDateStr(dateStr, deltaDays) {
   const dt = new Date(y, m - 1, d);
   dt.setDate(dt.getDate() + deltaDays);
   return dateToStr(dt);
+}
+
+function appliedRateForDate(tab, date) {
+  const relevantTopups = filterTopupsByTab(topups, tab).filter((t) => t.date <= date);
+  return computeAverageRate(relevantTopups);
+}
+
+function computeBalanceIdr(tab) {
+  const topupIdr = sumIdr(filterTopupsByTab(topups, tab));
+  const spentIdr = filterEntriesByTab(entries, tab).reduce((sum, entry) => sum + entry.total_idr, 0);
+  return topupIdr - spentIdr;
 }
 
 function renderItemsList() {
@@ -131,12 +162,23 @@ function recalcAndRenderTotals() {
   const { subtotal_idr, extra_idr, total_idr } = computeTotals(
     currentItems, currentTaxMode, currentTaxRate, currentServiceRate
   );
-  const total_krw = convertToKrw(total_idr, currentFxRate);
+  const date = el.dateInput.value || todayDateStr();
+  const appliedRate = appliedRateForDate(currentTab, date);
+  const total_krw = appliedRate != null ? convertToKrw(total_idr, appliedRate) : 0;
+
   el.subtotalDisplay.textContent = formatIdr(subtotal_idr);
   el.extraDisplay.textContent = formatIdr(extra_idr);
   el.totalIdrDisplay.textContent = formatIdr(total_idr);
   el.totalKrwDisplay.textContent = formatKrw(total_krw);
-  el.saveBtn.disabled = currentItems.length === 0;
+
+  el.appliedRateDisplay.textContent = appliedRate != null ? `100Rp = ${formatRate(appliedRate)}원` : '충전 필요';
+
+  const balanceIdr = computeBalanceIdr(currentTab);
+  el.appliedBalanceDisplay.textContent = appliedRate != null
+    ? `잔액 ${formatIdr(balanceIdr)} (${formatKrw(convertToKrw(balanceIdr, appliedRate))})`
+    : '충전 내역이 없습니다';
+
+  el.saveBtn.disabled = currentItems.length === 0 || appliedRate === null;
 }
 
 function resetCalculatorDraft() {
@@ -148,8 +190,6 @@ function resetCalculatorDraft() {
   el.memoInput.value = '';
   el.dateInput.value = todayDateStr();
   el.saveBtn.textContent = '저장하기';
-  currentFxRate = loadLastRate(currentTab);
-  el.fxRateInput.value = currentFxRate;
   renderItemsList();
   recalcAndRenderTotals();
 }
@@ -184,29 +224,69 @@ function renderLedger() {
   el.datePrevBtn.classList.toggle('hidden', showAllDates);
   el.dateNextBtn.classList.toggle('hidden', showAllDates);
 
-  const tabEntries = filterByTab(entries, currentTab);
-  const displayed = showAllDates
+  const tabEntries = filterEntriesByTab(entries, currentTab);
+  const tabTopups = filterTopupsByTab(topups, currentTab);
+
+  const displayedEntries = showAllDates
     ? tabEntries
     : tabEntries.filter((entry) => entry.date.slice(0, 10) === selectedDate);
+  const displayedTopups = showAllDates
+    ? tabTopups
+    : tabTopups.filter((topup) => topup.date.slice(0, 10) === selectedDate);
 
   if (showAllDates) {
-    const dates = displayed.map((entry) => entry.date.slice(0, 10)).sort();
+    const dates = [
+      ...displayedEntries.map((entry) => entry.date.slice(0, 10)),
+      ...displayedTopups.map((topup) => topup.date.slice(0, 10))
+    ].sort();
     el.ledgerCurrentDate.textContent = dates.length ? `${dates[0]} ~ ${dates[dates.length - 1]}` : '전체 기간';
   } else {
     el.ledgerCurrentDate.textContent = selectedDate;
   }
 
-  const sorted = sortByDateDesc(displayed);
+  const combined = [
+    ...sortTopupsByDateDesc(displayedTopups).map((topup) => ({ type: 'topup', date: topup.date, data: topup })),
+    ...sortEntriesByDateDesc(displayedEntries).map((entry) => ({ type: 'entry', date: entry.date, data: entry }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
   el.ledgerList.innerHTML = '';
-  sorted.forEach((entry) => {
-    el.ledgerList.appendChild(renderLedgerItem(entry, showAllDates));
+  combined.forEach((item) => {
+    el.ledgerList.appendChild(
+      item.type === 'topup' ? renderTopupItem(item.data, showAllDates) : renderLedgerItem(item.data, showAllDates)
+    );
   });
 
-  const { total_idr, total_krw } = sumTotals(displayed);
+  const { total_idr, total_krw } = sumTotals(displayedEntries);
   el.ledgerSummaryIdr.textContent = formatIdr(total_idr);
   el.ledgerSummaryKrw.textContent = formatKrw(total_krw);
 
+  const balanceIdr = computeBalanceIdr(currentTab);
+  const overallRate = computeAverageRate(tabTopups);
+  el.walletBalanceIdr.textContent = formatIdr(balanceIdr);
+  el.walletBalanceKrw.textContent = overallRate != null ? formatKrw(convertToKrw(balanceIdr, overallRate)) : '₩0';
+
   el.exportOverlay.hidden = true;
+  el.topupOverlay.hidden = true;
+}
+
+function renderTopupItem(topup, showDate) {
+  const container = document.createElement('div');
+  container.className = 'topup-item';
+
+  const rate = (topup.krw_amount / topup.idr_amount) * 100;
+  const dateLabel = showDate ? `${topup.date.slice(0, 10)} · 충전` : '충전';
+
+  container.innerHTML = `
+    <div>
+      <div class="topup-item-label">${escapeHtml(dateLabel)}</div>
+      <div class="topup-item-amount">${formatIdr(topup.idr_amount)}</div>
+    </div>
+    <div style="text-align: right">
+      <div class="topup-item-amount">${formatKrw(topup.krw_amount)}</div>
+      <div class="topup-item-label">100Rp = ${formatRate(rate)}원</div>
+    </div>
+  `;
+  return container;
 }
 
 function renderLedgerItem(entry, showDate) {
@@ -248,17 +328,8 @@ function renderLedgerItem(entry, showDate) {
   tags.innerHTML = `
     ${entry.memo ? `<span class="tag">${escapeHtml(entry.memo)}</span>` : ''}
     <span class="tag">${taxLabel} (세금 ${entry.tax_rate}% / 서비스 ${entry.service_rate}%)</span>
-    <span class="tag tag-fx">환율 100Rp = <input type="number" class="tag-fx-input" min="0" step="0.01" value="${entry.fx_rate_snapshot}">원</span>
+    <span class="tag">환율 100Rp = ${formatRate(entry.fx_rate_snapshot)}원</span>
   `;
-  const fxInput = tags.querySelector('.tag-fx-input');
-  fxInput.addEventListener('click', (e) => e.stopPropagation());
-  fxInput.addEventListener('change', (e) => {
-    const parsed = Number(e.target.value);
-    const rate = Number.isFinite(parsed) && parsed >= 0 ? parsed : entry.fx_rate_snapshot;
-    entries = updateEntry(entries, entry.id, { fx_rate_snapshot: rate });
-    saveEntries(entries);
-    renderLedger();
-  });
 
   const items = document.createElement('div');
   items.className = 'detail-items';
@@ -298,7 +369,6 @@ function loadEntryIntoCalculator(entry) {
   currentTaxMode = entry.tax_mode;
   currentTaxRate = entry.tax_rate;
   currentServiceRate = entry.service_rate;
-  currentFxRate = entry.fx_rate_snapshot;
 
   el.tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === currentTab));
   applyTabTheme(currentTab);
@@ -306,7 +376,6 @@ function loadEntryIntoCalculator(entry) {
   el.serviceRateInput.disabled = currentTaxMode !== 'plusplus';
   el.taxRateInput.value = currentTaxRate;
   el.serviceRateInput.value = currentServiceRate;
-  el.fxRateInput.value = currentFxRate;
   el.dateInput.value = entry.date.slice(0, 10);
   el.memoInput.value = entry.memo;
   el.saveBtn.textContent = '수정 저장';
@@ -318,6 +387,8 @@ function loadEntryIntoCalculator(entry) {
 
 function handleSaveEntry() {
   const date = el.dateInput.value || todayDateStr();
+  const appliedRate = appliedRateForDate(currentTab, date);
+  if (appliedRate == null) return;
 
   const payload = {
     tab_type: currentTab,
@@ -326,7 +397,7 @@ function handleSaveEntry() {
     tax_mode: currentTaxMode,
     tax_rate: currentTaxRate,
     service_rate: currentServiceRate,
-    fx_rate_snapshot: currentFxRate,
+    fx_rate_snapshot: appliedRate,
     memo: el.memoInput.value
   };
 
@@ -336,12 +407,46 @@ function handleSaveEntry() {
     entries = addEntry(entries, createEntry(payload));
   }
   saveEntries(entries);
-  saveLastRate(currentTab, currentFxRate);
   saveLastTaxRates(currentTaxRate, currentServiceRate);
 
   selectedDate = date;
   resetCalculatorDraft();
   switchView('ledger');
+}
+
+function openTopupModal() {
+  el.topupDateInput.value = el.dateInput.value || todayDateStr();
+  el.topupKrwInput.value = '';
+  el.topupIdrInput.value = '';
+  updateTopupPreview();
+  el.topupOverlay.hidden = false;
+}
+
+function updateTopupPreview() {
+  const krw = Number(el.topupKrwInput.value);
+  const idr = Number(el.topupIdrInput.value);
+  const valid = Number.isFinite(krw) && krw > 0 && Number.isFinite(idr) && idr > 0;
+  el.topupRatePreview.textContent = valid ? `100Rp = ${formatRate((krw / idr) * 100)}원` : '-';
+  el.topupConfirmBtn.disabled = !valid;
+}
+
+function handleTopupConfirm() {
+  const krw = Number(el.topupKrwInput.value);
+  const idr = Number(el.topupIdrInput.value);
+  if (!(Number.isFinite(krw) && krw > 0 && Number.isFinite(idr) && idr > 0)) return;
+
+  const topup = createTopup({
+    tab_type: currentTab,
+    date: el.topupDateInput.value || todayDateStr(),
+    krw_amount: krw,
+    idr_amount: idr
+  });
+  topups = addTopup(topups, topup);
+  saveTopups(topups);
+
+  el.topupOverlay.hidden = true;
+  recalcAndRenderTotals();
+  if (currentView === 'ledger') renderLedger();
 }
 
 function tripDateRange() {
@@ -355,7 +460,7 @@ function tripDateRange() {
 }
 
 function renderExportPanel() {
-  const tabEntries = filterByTab(entries, currentTab);
+  const tabEntries = filterEntriesByTab(entries, currentTab);
   const tripDates = tripDateRange();
   const extraDates = [...new Set(tabEntries.map((entry) => entry.date.slice(0, 10)))]
     .filter((date) => !tripDates.includes(date))
@@ -398,7 +503,7 @@ function renderExportPanel() {
 
 function handleExportConfirm() {
   const checkedDates = [...el.exportDateList.querySelectorAll('input:checked')].map((cb) => cb.value);
-  const tabEntries = filterByTab(entries, currentTab);
+  const tabEntries = filterEntriesByTab(entries, currentTab);
   const selected = tabEntries.filter((entry) => checkedDates.includes(entry.date.slice(0, 10)));
 
   const blob = new Blob([JSON.stringify({ entries: selected }, null, 2)], { type: 'application/json' });
@@ -422,17 +527,20 @@ el.serviceRateInput.addEventListener('input', (e) => {
   currentServiceRate = Number(e.target.value) || 0;
   recalcAndRenderTotals();
 });
-el.fxRateInput.addEventListener('input', (e) => {
-  currentFxRate = Number(e.target.value) || 0;
-  saveLastRate(currentTab, currentFxRate);
-  recalcAndRenderTotals();
-});
+el.dateInput.addEventListener('change', recalcAndRenderTotals);
 el.addItemBtn.addEventListener('click', () => {
   currentItems.push({ name: '', price_idr: 0 });
   renderItemsList();
   recalcAndRenderTotals();
 });
 el.saveBtn.addEventListener('click', handleSaveEntry);
+el.addTopupBtn.addEventListener('click', openTopupModal);
+el.topupOverlay.addEventListener('click', (e) => {
+  if (e.target === el.topupOverlay) el.topupOverlay.hidden = true;
+});
+el.topupKrwInput.addEventListener('input', updateTopupPreview);
+el.topupIdrInput.addEventListener('input', updateTopupPreview);
+el.topupConfirmBtn.addEventListener('click', handleTopupConfirm);
 el.showAllToggle.addEventListener('change', (e) => {
   showAllDates = e.target.checked;
   renderLedger();
@@ -459,7 +567,6 @@ el.exportConfirmBtn.addEventListener('click', handleExportConfirm);
 
 el.taxRateInput.value = currentTaxRate;
 el.serviceRateInput.value = currentServiceRate;
-el.fxRateInput.value = currentFxRate;
 el.dateInput.value = todayDateStr();
 renderItemsList();
 recalcAndRenderTotals();
