@@ -4,7 +4,7 @@ import {
   filterByTab as filterEntriesByTab, sortByDateDesc as sortEntriesByDateDesc, sumTotals
 } from './entries.js';
 import {
-  createTopup, addTopup,
+  createTopup, addTopup, updateTopup, removeTopup,
   filterByTab as filterTopupsByTab, sortByDateDesc as sortTopupsByDateDesc,
   computeAverageRate, sumIdr
 } from './topups.js';
@@ -20,6 +20,7 @@ let currentItems = [];
 let currentTaxMode = 'none';
 let { tax_rate: currentTaxRate, service_rate: currentServiceRate } = loadLastTaxRates();
 let editingEntryId = null;
+let editingTopupId = null;
 let selectedDate = todayDateStr();
 let showAllDates = false;
 
@@ -276,7 +277,9 @@ function renderTopupItem(topup, showDate) {
   const rate = (topup.krw_amount / topup.idr_amount) * 100;
   const dateLabel = showDate ? `${topup.date.slice(0, 10)} · 충전` : '충전';
 
-  container.innerHTML = `
+  const header = document.createElement('div');
+  header.className = 'topup-item-header';
+  header.innerHTML = `
     <div class="topup-item-icon">
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M12 19V5" />
@@ -292,6 +295,33 @@ function renderTopupItem(topup, showDate) {
       <div class="topup-item-label">100Rp = ${formatRate(rate)}원</div>
     </div>
   `;
+  header.addEventListener('click', () => container.classList.toggle('expanded'));
+
+  const detail = document.createElement('div');
+  detail.className = 'topup-item-detail';
+
+  const actions = document.createElement('div');
+  actions.className = 'ledger-item-actions';
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn-edit';
+  editBtn.textContent = '수정';
+  editBtn.addEventListener('click', () => openTopupModal(topup));
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'btn-delete';
+  deleteBtn.textContent = '삭제';
+  deleteBtn.addEventListener('click', () => {
+    if (!confirm('이 충전 내역을 삭제할까요?')) return;
+    topups = removeTopup(topups, topup.id);
+    saveTopups(topups);
+    renderLedger();
+  });
+
+  actions.append(editBtn, deleteBtn);
+  detail.append(actions);
+
+  container.append(header, detail);
   return container;
 }
 
@@ -420,10 +450,12 @@ function handleSaveEntry() {
   switchView('ledger');
 }
 
-function openTopupModal() {
-  el.topupDateInput.value = el.dateInput.value || todayDateStr();
-  el.topupKrwInput.value = '';
-  el.topupIdrInput.value = '';
+function openTopupModal(topup) {
+  editingTopupId = topup ? topup.id : null;
+  el.topupDateInput.value = topup ? topup.date.slice(0, 10) : (el.dateInput.value || todayDateStr());
+  el.topupKrwInput.value = topup ? topup.krw_amount : '';
+  el.topupIdrInput.value = topup ? topup.idr_amount : '';
+  el.topupConfirmBtn.textContent = topup ? '충전 수정' : '충전 저장';
   updateTopupPreview();
   el.topupOverlay.hidden = false;
 }
@@ -441,14 +473,15 @@ function handleTopupConfirm() {
   const idr = Number(el.topupIdrInput.value);
   if (!(Number.isFinite(krw) && krw > 0 && Number.isFinite(idr) && idr > 0)) return;
 
-  const topup = createTopup({
-    tab_type: currentTab,
-    date: el.topupDateInput.value || todayDateStr(),
-    krw_amount: krw,
-    idr_amount: idr
-  });
-  topups = addTopup(topups, topup);
+  const date = el.topupDateInput.value || todayDateStr();
+
+  if (editingTopupId) {
+    topups = updateTopup(topups, editingTopupId, { date, krw_amount: krw, idr_amount: idr });
+  } else {
+    topups = addTopup(topups, createTopup({ tab_type: currentTab, date, krw_amount: krw, idr_amount: idr }));
+  }
   saveTopups(topups);
+  editingTopupId = null;
 
   el.topupOverlay.hidden = true;
   recalcAndRenderTotals();
@@ -542,7 +575,10 @@ el.addItemBtn.addEventListener('click', () => {
 el.saveBtn.addEventListener('click', handleSaveEntry);
 el.addTopupBtn.addEventListener('click', openTopupModal);
 el.topupOverlay.addEventListener('click', (e) => {
-  if (e.target === el.topupOverlay) el.topupOverlay.hidden = true;
+  if (e.target === el.topupOverlay) {
+    el.topupOverlay.hidden = true;
+    editingTopupId = null;
+  }
 });
 el.topupKrwInput.addEventListener('input', updateTopupPreview);
 el.topupIdrInput.addEventListener('input', updateTopupPreview);

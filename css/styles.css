@@ -246,15 +246,22 @@ main {
 }
 
 .topup-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
   background: color-mix(in srgb, var(--color-primary) 12%, white);
   border: 1px dashed var(--color-primary);
   border-radius: var(--radius-card);
   padding: var(--space-sm);
   margin-bottom: var(--space-sm);
 }
+
+.topup-item-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+}
+
+.topup-item-detail { display: none; margin-top: var(--space-sm); }
+.topup-item.expanded .topup-item-detail { display: block; }
 
 .topup-item-icon {
   flex-shrink: 0;
