@@ -64,17 +64,30 @@
 
       <section id="ledger-view" class="view">
         <div class="date-nav">
-          <button id="date-prev-btn" class="date-nav-btn" aria-label="이전 날짜">‹</button>
-          <span id="ledger-current-date" class="date-nav-label"></span>
-          <button id="date-next-btn" class="date-nav-btn" aria-label="다음 날짜">›</button>
-        </div>
-
-        <div class="ledger-toolbar">
-          <label class="switch-field">
+          <div class="date-nav-center">
+            <button id="date-prev-btn" class="date-nav-btn" aria-label="이전 날짜">‹</button>
+            <span id="ledger-current-date" class="date-nav-label"></span>
+            <button id="date-next-btn" class="date-nav-btn" aria-label="다음 날짜">›</button>
+          </div>
+          <label class="switch-field switch-field-sm">
             전체보기
             <input type="checkbox" id="show-all-toggle" class="switch-input">
             <span class="switch-track"><span class="switch-thumb"></span></span>
           </label>
+        </div>
+
+        <div class="wallet-balance-card">
+          <div class="wallet-balance-col">
+            <div class="wallet-balance-label">카드 잔액</div>
+            <div id="wallet-balance-card-idr" class="wallet-balance-amount">Rp 0</div>
+            <div id="wallet-balance-card-krw" class="wallet-balance-sub">₩0</div>
+          </div>
+          <div class="wallet-balance-divider"></div>
+          <div class="wallet-balance-col">
+            <div class="wallet-balance-label">현금 잔액</div>
+            <div id="wallet-balance-cash-idr" class="wallet-balance-amount">Rp 0</div>
+            <div id="wallet-balance-cash-krw" class="wallet-balance-sub">₩0</div>
+          </div>
         </div>
 
         <div id="ledger-list" class="ledger-list"></div>
@@ -82,17 +95,6 @@
         <div class="ledger-summary">
           <span id="ledger-summary-idr">Rp 0</span>
           <span id="ledger-summary-krw">₩0</span>
-        </div>
-
-        <div class="wallet-balance">
-          <span>카드 잔액</span>
-          <span id="wallet-balance-card-idr">Rp 0</span>
-          <span id="wallet-balance-card-krw">₩0</span>
-        </div>
-        <div class="wallet-balance">
-          <span>현금 잔액</span>
-          <span id="wallet-balance-cash-idr">Rp 0</span>
-          <span id="wallet-balance-cash-krw">₩0</span>
         </div>
 
         <div class="export-widget">

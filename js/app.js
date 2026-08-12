@@ -203,11 +203,12 @@ function recalcAndRenderTotals() {
 
   el.appliedRateDisplay.textContent = appliedRate != null ? `100Rp = ${formatRate(appliedRate)}원` : '충전 필요';
 
-  const cardBalanceIdr = computeCardBalanceIdr(currentTab);
-  const cashBalanceIdr = computeCashBalanceIdr(currentTab);
+  const balanceIdr = currentPaymentMethod === 'cash'
+    ? computeCashBalanceIdr(currentTab)
+    : computeCardBalanceIdr(currentTab);
+  const balanceLabel = currentPaymentMethod === 'cash' ? '현금 잔액' : '카드 잔액';
   el.appliedBalanceDisplay.textContent = appliedRate != null
-    ? `카드 잔액 ${formatIdr(cardBalanceIdr)} (${formatKrw(convertToKrw(cardBalanceIdr, appliedRate))})\n` +
-      `현금 잔액 ${formatIdr(cashBalanceIdr)} (${formatKrw(convertToKrw(cashBalanceIdr, appliedRate))})`
+    ? `${balanceLabel} ${formatIdr(balanceIdr)} (${formatKrw(convertToKrw(balanceIdr, appliedRate))})`
     : '충전 내역이 없습니다';
 
   el.saveBtn.disabled = currentItems.length === 0 || appliedRate === null;
@@ -231,6 +232,7 @@ function resetCalculatorDraft() {
 function handlePaymentMethodChange(method) {
   currentPaymentMethod = method;
   el.paymentMethodButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.method === method));
+  recalcAndRenderTotals();
 }
 
 function applyTabTheme(tab) {

@@ -227,15 +227,34 @@ main {
   white-space: pre-line;
 }
 
-.wallet-balance {
+.wallet-balance-card {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-xs);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--color-fg);
-  margin-bottom: var(--space-sm);
+  align-items: stretch;
+  background: var(--color-panel);
+  border-radius: var(--radius-card);
+  padding: var(--space-md);
+  margin-bottom: var(--space-md);
 }
+
+.wallet-balance-col {
+  flex: 1;
+  text-align: center;
+}
+
+.wallet-balance-divider {
+  width: 1px;
+  background: var(--color-border);
+  margin: 0 var(--space-md);
+}
+
+.wallet-balance-label {
+  font-size: 12px;
+  color: var(--color-muted);
+  margin-bottom: var(--space-xxs);
+}
+
+.wallet-balance-amount { font-size: 16px; font-weight: 700; }
+.wallet-balance-sub { font-size: 12px; color: var(--color-muted-light); }
 
 .wallet-balance span:first-child { color: var(--color-muted); font-weight: 400; }
 
@@ -400,10 +419,18 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
 .date-nav {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-md);
+  justify-content: space-between;
+  gap: var(--space-sm);
   padding: var(--space-sm) 0;
   margin-bottom: var(--space-md);
+}
+
+.date-nav-center {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex: 1;
+  justify-content: center;
 }
 
 .date-nav-btn {
@@ -426,12 +453,6 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
   text-align: center;
 }
 
-.ledger-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: var(--space-sm);
-}
-
 .switch-field {
   display: flex;
   align-items: center;
@@ -440,7 +461,17 @@ input:disabled { background: var(--color-panel); color: var(--color-disabled); }
   font-weight: 700;
   color: var(--color-fg);
   cursor: pointer;
+  flex-shrink: 0;
 }
+
+.switch-field-sm {
+  font-size: 12px;
+  gap: 4px;
+}
+
+.switch-field-sm .switch-track { width: 32px; height: 18px; }
+.switch-field-sm .switch-thumb { width: 14px; height: 14px; }
+.switch-field-sm .switch-input:checked + .switch-track .switch-thumb { transform: translateX(14px); }
 
 .switch-input { display: none; }
 
