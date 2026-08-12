@@ -31,9 +31,17 @@
             <div class="applied-rate-label">적용 환율 (충전 평균)</div>
             <div id="applied-rate-display" class="applied-rate-value">-</div>
           </div>
-          <button id="add-topup-btn" class="btn-link-sm">+ 충전 입력</button>
+          <div class="applied-rate-actions">
+            <button id="add-topup-btn" class="btn-link-sm">+ 충전 입력</button>
+            <button id="add-withdrawal-btn" class="btn-link-sm">+ 현금 인출</button>
+          </div>
         </div>
         <div id="applied-balance-display" class="applied-balance"></div>
+
+        <div class="payment-method-toggle">
+          <button class="payment-method-btn active" data-method="card">카드</button>
+          <button class="payment-method-btn" data-method="cash">현금</button>
+        </div>
 
         <div class="date-input">
           <label>날짜<input type="date" id="date-input"></label>
@@ -77,9 +85,14 @@
         </div>
 
         <div class="wallet-balance">
-          <span>잔액</span>
-          <span id="wallet-balance-idr">Rp 0</span>
-          <span id="wallet-balance-krw">₩0</span>
+          <span>카드 잔액</span>
+          <span id="wallet-balance-card-idr">Rp 0</span>
+          <span id="wallet-balance-card-krw">₩0</span>
+        </div>
+        <div class="wallet-balance">
+          <span>현금 잔액</span>
+          <span id="wallet-balance-cash-idr">Rp 0</span>
+          <span id="wallet-balance-cash-krw">₩0</span>
         </div>
 
         <div class="export-widget">
@@ -104,6 +117,18 @@
         <label class="modal-field">받은 루피아 (Rp)<input type="number" id="topup-idr-input" min="0" placeholder="예: 10000000"></label>
         <div class="modal-rate-preview">환율: <span id="topup-rate-preview">-</span></div>
         <button id="topup-confirm-btn" class="btn-primary" disabled>충전 저장</button>
+      </div>
+    </div>
+
+    <div id="withdrawal-overlay" class="export-overlay" hidden>
+      <div class="export-modal">
+        <div class="export-modal-header">
+          <span>현금 인출</span>
+        </div>
+        <label class="modal-field">날짜<input type="date" id="withdrawal-date-input"></label>
+        <label class="modal-field">인출한 루피아 (Rp)<input type="number" id="withdrawal-idr-input" min="0" placeholder="예: 500000"></label>
+        <label class="modal-field">수수료 (Rp, 선택)<input type="number" id="withdrawal-fee-input" min="0" placeholder="예: 25000"></label>
+        <button id="withdrawal-confirm-btn" class="btn-primary" disabled>인출 저장</button>
       </div>
     </div>
 

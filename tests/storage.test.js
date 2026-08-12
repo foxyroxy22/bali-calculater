@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  loadEntries, saveEntries, loadTopups, saveTopups, loadLastTaxRates, saveLastTaxRates
+  loadEntries, saveEntries, loadTopups, saveTopups, loadWithdrawals, saveWithdrawals,
+  loadLastTaxRates, saveLastTaxRates
 } from '../js/storage.js';
 
 class FakeStorage {
@@ -40,6 +41,22 @@ test('loadTopups falls back to empty array on corrupt JSON', () => {
   const storage = new FakeStorage();
   storage.setItem('bali_expense_topups', '{not valid json');
   assert.deepEqual(loadTopups(storage), []);
+});
+
+test('loadWithdrawals returns empty array when nothing stored', () => {
+  assert.deepEqual(loadWithdrawals(new FakeStorage()), []);
+});
+
+test('saveWithdrawals then loadWithdrawals round-trips data', () => {
+  const storage = new FakeStorage();
+  saveWithdrawals([{ id: 'a' }], storage);
+  assert.deepEqual(loadWithdrawals(storage), [{ id: 'a' }]);
+});
+
+test('loadWithdrawals falls back to empty array on corrupt JSON', () => {
+  const storage = new FakeStorage();
+  storage.setItem('bali_expense_withdrawals', '{not valid json');
+  assert.deepEqual(loadWithdrawals(storage), []);
 });
 
 test('loadLastTaxRates defaults to 10/10 when unset', () => {

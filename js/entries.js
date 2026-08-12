@@ -1,7 +1,7 @@
 import { computeTotals, convertToKrw } from './calc.js';
 
 export function createEntry(
-  { tab_type, date, items, tax_mode, tax_rate, service_rate, fx_rate_snapshot, memo },
+  { tab_type, date, items, tax_mode, tax_rate, service_rate, fx_rate_snapshot, memo, payment_method },
   idGenerator = () => crypto.randomUUID()
 ) {
   const { subtotal_idr, extra_idr, total_idr } = computeTotals(items, tax_mode, tax_rate, service_rate);
@@ -19,7 +19,8 @@ export function createEntry(
     total_idr,
     fx_rate_snapshot,
     total_krw,
-    memo: memo || ''
+    memo: memo || '',
+    payment_method: payment_method || 'card'
   };
 }
 

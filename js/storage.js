@@ -1,5 +1,6 @@
 const ENTRIES_KEY = 'bali_expense_entries';
 const TOPUPS_KEY = 'bali_expense_topups';
+const WITHDRAWALS_KEY = 'bali_expense_withdrawals';
 const LAST_TAX_RATE_KEY = 'bali_expense_last_tax_rate';
 const LAST_SERVICE_RATE_KEY = 'bali_expense_last_service_rate';
 
@@ -29,6 +30,14 @@ export function loadTopups(storage = window.localStorage) {
 
 export function saveTopups(topups, storage = window.localStorage) {
   storage.setItem(TOPUPS_KEY, JSON.stringify(topups));
+}
+
+export function loadWithdrawals(storage = window.localStorage) {
+  return loadArray(WITHDRAWALS_KEY, storage);
+}
+
+export function saveWithdrawals(withdrawals, storage = window.localStorage) {
+  storage.setItem(WITHDRAWALS_KEY, JSON.stringify(withdrawals));
 }
 
 export function loadLastTaxRates(storage = window.localStorage) {

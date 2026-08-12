@@ -132,13 +132,13 @@ main {
 .view { display: none; }
 .view.active { display: block; }
 
-.tax-mode-toggle {
+.tax-mode-toggle, .payment-method-toggle {
   display: flex;
   gap: var(--space-xs);
   margin-bottom: var(--space-md);
 }
 
-.tax-mode-btn {
+.tax-mode-btn, .payment-method-btn {
   flex: 1;
   padding: var(--space-xs);
   min-height: 44px;
@@ -149,13 +149,13 @@ main {
   cursor: pointer;
 }
 
-.tax-mode-btn.active {
+.tax-mode-btn.active, .payment-method-btn.active {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: var(--color-on-primary);
 }
 
-.tax-mode-btn:active { opacity: 0.7; }
+.tax-mode-btn:active, .payment-method-btn:active { opacity: 0.7; }
 
 .rate-inputs, .fx-input, .date-input {
   display: flex;
@@ -212,10 +212,19 @@ main {
   color: var(--color-fg);
 }
 
+.applied-rate-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-xxs);
+  flex-shrink: 0;
+}
+
 .applied-balance {
   font-size: 13px;
   color: var(--color-muted);
   margin-bottom: var(--space-md);
+  white-space: pre-line;
 }
 
 .wallet-balance {
@@ -245,13 +254,20 @@ main {
   margin-bottom: var(--space-md);
 }
 
-.topup-item {
+.topup-item, .withdrawal-item {
   background: color-mix(in srgb, var(--color-primary) 12%, white);
   border: 1px dashed var(--color-primary);
   border-radius: var(--radius-card);
   padding: var(--space-sm);
   margin-bottom: var(--space-sm);
 }
+
+.withdrawal-item {
+  background: color-mix(in srgb, #f5a623 15%, white);
+  border-color: #f5a623;
+}
+
+.withdrawal-item .topup-item-icon { background: #f5a623; }
 
 .topup-item-header {
   display: flex;
@@ -261,7 +277,8 @@ main {
 }
 
 .topup-item-detail { display: none; margin-top: var(--space-sm); }
-.topup-item.expanded .topup-item-detail { display: block; }
+.topup-item.expanded .topup-item-detail,
+.withdrawal-item.expanded .topup-item-detail { display: block; }
 
 .topup-item-icon {
   flex-shrink: 0;

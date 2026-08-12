@@ -6,21 +6,30 @@ import {
 import {
   createTopup, addTopup, updateTopup, removeTopup,
   filterByTab as filterTopupsByTab, sortByDateDesc as sortTopupsByDateDesc,
-  computeAverageRate, sumIdr
+  computeAverageRate, sumIdr as sumTopupIdr
 } from './topups.js';
 import {
-  loadEntries, saveEntries, loadTopups, saveTopups, loadLastTaxRates, saveLastTaxRates
+  createWithdrawal, addWithdrawal, updateWithdrawal, removeWithdrawal,
+  filterByTab as filterWithdrawalsByTab, sortByDateDesc as sortWithdrawalsByDateDesc,
+  sumIdr as sumWithdrawalIdr, sumCardDeductionIdr as sumWithdrawalCardDeductionIdr
+} from './withdrawals.js';
+import {
+  loadEntries, saveEntries, loadTopups, saveTopups, loadWithdrawals, saveWithdrawals,
+  loadLastTaxRates, saveLastTaxRates
 } from './storage.js';
 
 let entries = loadEntries();
 let topups = loadTopups();
+let withdrawals = loadWithdrawals();
 let currentTab = 'shared';
 let currentView = 'calculator';
 let currentItems = [];
 let currentTaxMode = 'none';
+let currentPaymentMethod = 'card';
 let { tax_rate: currentTaxRate, service_rate: currentServiceRate } = loadLastTaxRates();
 let editingEntryId = null;
 let editingTopupId = null;
+let editingWithdrawalId = null;
 let selectedDate = todayDateStr();
 let showAllDates = false;
 
@@ -32,6 +41,8 @@ const el = {
   appliedRateDisplay: document.getElementById('applied-rate-display'),
   appliedBalanceDisplay: document.getElementById('applied-balance-display'),
   addTopupBtn: document.getElementById('add-topup-btn'),
+  addWithdrawalBtn: document.getElementById('add-withdrawal-btn'),
+  paymentMethodButtons: document.querySelectorAll('.payment-method-btn'),
   dateInput: document.getElementById('date-input'),
   itemsList: document.getElementById('items-list'),
   addItemBtn: document.getElementById('add-item-btn'),
@@ -48,8 +59,10 @@ const el = {
   ledgerSummaryIdr: document.getElementById('ledger-summary-idr'),
   ledgerSummaryKrw: document.getElementById('ledger-summary-krw'),
   ledgerCurrentDate: document.getElementById('ledger-current-date'),
-  walletBalanceIdr: document.getElementById('wallet-balance-idr'),
-  walletBalanceKrw: document.getElementById('wallet-balance-krw'),
+  walletBalanceCardIdr: document.getElementById('wallet-balance-card-idr'),
+  walletBalanceCardKrw: document.getElementById('wallet-balance-card-krw'),
+  walletBalanceCashIdr: document.getElementById('wallet-balance-cash-idr'),
+  walletBalanceCashKrw: document.getElementById('wallet-balance-cash-krw'),
   datePrevBtn: document.getElementById('date-prev-btn'),
   dateNextBtn: document.getElementById('date-next-btn'),
   showAllToggle: document.getElementById('show-all-toggle'),
@@ -59,6 +72,11 @@ const el = {
   topupIdrInput: document.getElementById('topup-idr-input'),
   topupRatePreview: document.getElementById('topup-rate-preview'),
   topupConfirmBtn: document.getElementById('topup-confirm-btn'),
+  withdrawalOverlay: document.getElementById('withdrawal-overlay'),
+  withdrawalDateInput: document.getElementById('withdrawal-date-input'),
+  withdrawalIdrInput: document.getElementById('withdrawal-idr-input'),
+  withdrawalFeeInput: document.getElementById('withdrawal-fee-input'),
+  withdrawalConfirmBtn: document.getElementById('withdrawal-confirm-btn'),
   exportBtn: document.getElementById('export-btn'),
   exportOverlay: document.getElementById('export-overlay'),
   exportDateList: document.getElementById('export-date-list'),
@@ -112,10 +130,21 @@ function appliedRateForDate(tab, date) {
   return computeAverageRate(relevantTopups);
 }
 
-function computeBalanceIdr(tab) {
-  const topupIdr = sumIdr(filterTopupsByTab(topups, tab));
-  const spentIdr = filterEntriesByTab(entries, tab).reduce((sum, entry) => sum + entry.total_idr, 0);
-  return topupIdr - spentIdr;
+function computeCardBalanceIdr(tab) {
+  const topupIdr = sumTopupIdr(filterTopupsByTab(topups, tab));
+  const withdrawalIdr = sumWithdrawalCardDeductionIdr(filterWithdrawalsByTab(withdrawals, tab));
+  const cardSpentIdr = filterEntriesByTab(entries, tab)
+    .filter((entry) => entry.payment_method !== 'cash')
+    .reduce((sum, entry) => sum + entry.total_idr, 0);
+  return topupIdr - withdrawalIdr - cardSpentIdr;
+}
+
+function computeCashBalanceIdr(tab) {
+  const withdrawalIdr = sumWithdrawalIdr(filterWithdrawalsByTab(withdrawals, tab));
+  const cashSpentIdr = filterEntriesByTab(entries, tab)
+    .filter((entry) => entry.payment_method === 'cash')
+    .reduce((sum, entry) => sum + entry.total_idr, 0);
+  return withdrawalIdr - cashSpentIdr;
 }
 
 function renderItemsList() {
@@ -174,9 +203,11 @@ function recalcAndRenderTotals() {
 
   el.appliedRateDisplay.textContent = appliedRate != null ? `100Rp = ${formatRate(appliedRate)}원` : '충전 필요';
 
-  const balanceIdr = computeBalanceIdr(currentTab);
+  const cardBalanceIdr = computeCardBalanceIdr(currentTab);
+  const cashBalanceIdr = computeCashBalanceIdr(currentTab);
   el.appliedBalanceDisplay.textContent = appliedRate != null
-    ? `잔액 ${formatIdr(balanceIdr)} (${formatKrw(convertToKrw(balanceIdr, appliedRate))})`
+    ? `카드 잔액 ${formatIdr(cardBalanceIdr)} (${formatKrw(convertToKrw(cardBalanceIdr, appliedRate))})\n` +
+      `현금 잔액 ${formatIdr(cashBalanceIdr)} (${formatKrw(convertToKrw(cashBalanceIdr, appliedRate))})`
     : '충전 내역이 없습니다';
 
   el.saveBtn.disabled = currentItems.length === 0 || appliedRate === null;
@@ -185,14 +216,21 @@ function recalcAndRenderTotals() {
 function resetCalculatorDraft() {
   currentItems = [];
   currentTaxMode = 'none';
+  currentPaymentMethod = 'card';
   editingEntryId = null;
   el.taxModeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === 'none'));
+  el.paymentMethodButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.method === 'card'));
   el.serviceRateInput.disabled = true;
   el.memoInput.value = '';
   el.dateInput.value = todayDateStr();
   el.saveBtn.textContent = '저장하기';
   renderItemsList();
   recalcAndRenderTotals();
+}
+
+function handlePaymentMethodChange(method) {
+  currentPaymentMethod = method;
+  el.paymentMethodButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.method === method));
 }
 
 function applyTabTheme(tab) {
@@ -227,6 +265,7 @@ function renderLedger() {
 
   const tabEntries = filterEntriesByTab(entries, currentTab);
   const tabTopups = filterTopupsByTab(topups, currentTab);
+  const tabWithdrawals = filterWithdrawalsByTab(withdrawals, currentTab);
 
   const displayedEntries = showAllDates
     ? tabEntries
@@ -234,11 +273,15 @@ function renderLedger() {
   const displayedTopups = showAllDates
     ? tabTopups
     : tabTopups.filter((topup) => topup.date.slice(0, 10) === selectedDate);
+  const displayedWithdrawals = showAllDates
+    ? tabWithdrawals
+    : tabWithdrawals.filter((withdrawal) => withdrawal.date.slice(0, 10) === selectedDate);
 
   if (showAllDates) {
     const dates = [
       ...displayedEntries.map((entry) => entry.date.slice(0, 10)),
-      ...displayedTopups.map((topup) => topup.date.slice(0, 10))
+      ...displayedTopups.map((topup) => topup.date.slice(0, 10)),
+      ...displayedWithdrawals.map((withdrawal) => withdrawal.date.slice(0, 10))
     ].sort();
     el.ledgerCurrentDate.textContent = dates.length ? `${dates[0]} ~ ${dates[dates.length - 1]}` : '전체 기간';
   } else {
@@ -247,27 +290,34 @@ function renderLedger() {
 
   const combined = [
     ...sortTopupsByDateDesc(displayedTopups).map((topup) => ({ type: 'topup', date: topup.date, data: topup })),
+    ...sortWithdrawalsByDateDesc(displayedWithdrawals).map((withdrawal) => ({ type: 'withdrawal', date: withdrawal.date, data: withdrawal })),
     ...sortEntriesByDateDesc(displayedEntries).map((entry) => ({ type: 'entry', date: entry.date, data: entry }))
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   el.ledgerList.innerHTML = '';
   combined.forEach((item) => {
-    el.ledgerList.appendChild(
-      item.type === 'topup' ? renderTopupItem(item.data, showAllDates) : renderLedgerItem(item.data, showAllDates)
-    );
+    let node;
+    if (item.type === 'topup') node = renderTopupItem(item.data, showAllDates);
+    else if (item.type === 'withdrawal') node = renderWithdrawalItem(item.data, showAllDates);
+    else node = renderLedgerItem(item.data, showAllDates);
+    el.ledgerList.appendChild(node);
   });
 
   const { total_idr, total_krw } = sumTotals(displayedEntries);
   el.ledgerSummaryIdr.textContent = formatIdr(total_idr);
   el.ledgerSummaryKrw.textContent = formatKrw(total_krw);
 
-  const balanceIdr = computeBalanceIdr(currentTab);
   const overallRate = computeAverageRate(tabTopups);
-  el.walletBalanceIdr.textContent = formatIdr(balanceIdr);
-  el.walletBalanceKrw.textContent = overallRate != null ? formatKrw(convertToKrw(balanceIdr, overallRate)) : '₩0';
+  const cardBalanceIdr = computeCardBalanceIdr(currentTab);
+  const cashBalanceIdr = computeCashBalanceIdr(currentTab);
+  el.walletBalanceCardIdr.textContent = formatIdr(cardBalanceIdr);
+  el.walletBalanceCardKrw.textContent = overallRate != null ? formatKrw(convertToKrw(cardBalanceIdr, overallRate)) : '₩0';
+  el.walletBalanceCashIdr.textContent = formatIdr(cashBalanceIdr);
+  el.walletBalanceCashKrw.textContent = overallRate != null ? formatKrw(convertToKrw(cashBalanceIdr, overallRate)) : '₩0';
 
   el.exportOverlay.hidden = true;
   el.topupOverlay.hidden = true;
+  el.withdrawalOverlay.hidden = true;
 }
 
 function renderTopupItem(topup, showDate) {
@@ -315,6 +365,60 @@ function renderTopupItem(topup, showDate) {
     if (!confirm('이 충전 내역을 삭제할까요?')) return;
     topups = removeTopup(topups, topup.id);
     saveTopups(topups);
+    renderLedger();
+  });
+
+  actions.append(editBtn, deleteBtn);
+  detail.append(actions);
+
+  container.append(header, detail);
+  return container;
+}
+
+function renderWithdrawalItem(withdrawal, showDate) {
+  const container = document.createElement('div');
+  container.className = 'withdrawal-item';
+
+  const dateLabel = showDate ? `${withdrawal.date.slice(0, 10)} · 현금 인출` : '현금 인출';
+  const feeLabel = withdrawal.fee_idr > 0 ? `수수료 ${formatIdr(withdrawal.fee_idr)}` : '수수료 없음';
+
+  const header = document.createElement('div');
+  header.className = 'topup-item-header';
+  header.innerHTML = `
+    <div class="topup-item-icon">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 5v14" />
+        <path d="M18 13l-6 6-6-6" />
+      </svg>
+    </div>
+    <div class="topup-item-info">
+      <div class="topup-item-label">${escapeHtml(dateLabel)}</div>
+      <div class="topup-item-amount">${formatIdr(withdrawal.idr_amount)}</div>
+    </div>
+    <div class="topup-item-side">
+      <div class="topup-item-label">${escapeHtml(feeLabel)}</div>
+    </div>
+  `;
+  header.addEventListener('click', () => container.classList.toggle('expanded'));
+
+  const detail = document.createElement('div');
+  detail.className = 'topup-item-detail';
+
+  const actions = document.createElement('div');
+  actions.className = 'ledger-item-actions';
+
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn-edit';
+  editBtn.textContent = '수정';
+  editBtn.addEventListener('click', () => openWithdrawalModal(withdrawal));
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.className = 'btn-delete';
+  deleteBtn.textContent = '삭제';
+  deleteBtn.addEventListener('click', () => {
+    if (!confirm('이 인출 내역을 삭제할까요?')) return;
+    withdrawals = removeWithdrawal(withdrawals, withdrawal.id);
+    saveWithdrawals(withdrawals);
     renderLedger();
   });
 
@@ -405,10 +509,12 @@ function loadEntryIntoCalculator(entry) {
   currentTaxMode = entry.tax_mode;
   currentTaxRate = entry.tax_rate;
   currentServiceRate = entry.service_rate;
+  currentPaymentMethod = entry.payment_method || 'card';
 
   el.tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === currentTab));
   applyTabTheme(currentTab);
   el.taxModeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === currentTaxMode));
+  el.paymentMethodButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.method === currentPaymentMethod));
   el.serviceRateInput.disabled = currentTaxMode !== 'plusplus';
   el.taxRateInput.value = currentTaxRate;
   el.serviceRateInput.value = currentServiceRate;
@@ -434,7 +540,8 @@ function handleSaveEntry() {
     tax_rate: currentTaxRate,
     service_rate: currentServiceRate,
     fx_rate_snapshot: appliedRate,
-    memo: el.memoInput.value
+    memo: el.memoInput.value,
+    payment_method: currentPaymentMethod
   };
 
   if (editingEntryId) {
@@ -484,6 +591,44 @@ function handleTopupConfirm() {
   editingTopupId = null;
 
   el.topupOverlay.hidden = true;
+  recalcAndRenderTotals();
+  if (currentView === 'ledger') renderLedger();
+}
+
+function openWithdrawalModal(withdrawal) {
+  editingWithdrawalId = withdrawal ? withdrawal.id : null;
+  el.withdrawalDateInput.value = withdrawal ? withdrawal.date.slice(0, 10) : (el.dateInput.value || todayDateStr());
+  el.withdrawalIdrInput.value = withdrawal ? withdrawal.idr_amount : '';
+  el.withdrawalFeeInput.value = withdrawal && withdrawal.fee_idr ? withdrawal.fee_idr : '';
+  el.withdrawalConfirmBtn.textContent = withdrawal ? '인출 수정' : '인출 저장';
+  updateWithdrawalConfirmState();
+  el.withdrawalOverlay.hidden = false;
+}
+
+function updateWithdrawalConfirmState() {
+  const idr = Number(el.withdrawalIdrInput.value);
+  el.withdrawalConfirmBtn.disabled = !(Number.isFinite(idr) && idr > 0);
+}
+
+function handleWithdrawalConfirm() {
+  const idr = Number(el.withdrawalIdrInput.value);
+  if (!(Number.isFinite(idr) && idr > 0)) return;
+  const feeRaw = Number(el.withdrawalFeeInput.value);
+  const fee = Number.isFinite(feeRaw) && feeRaw > 0 ? feeRaw : 0;
+  const date = el.withdrawalDateInput.value || todayDateStr();
+
+  if (editingWithdrawalId) {
+    withdrawals = updateWithdrawal(withdrawals, editingWithdrawalId, { date, idr_amount: idr, fee_idr: fee });
+  } else {
+    withdrawals = addWithdrawal(
+      withdrawals,
+      createWithdrawal({ tab_type: currentTab, date, idr_amount: idr, fee_idr: fee })
+    );
+  }
+  saveWithdrawals(withdrawals);
+  editingWithdrawalId = null;
+
+  el.withdrawalOverlay.hidden = true;
   recalcAndRenderTotals();
   if (currentView === 'ledger') renderLedger();
 }
@@ -573,6 +718,7 @@ el.addItemBtn.addEventListener('click', () => {
   recalcAndRenderTotals();
 });
 el.saveBtn.addEventListener('click', handleSaveEntry);
+el.paymentMethodButtons.forEach((btn) => btn.addEventListener('click', () => handlePaymentMethodChange(btn.dataset.method)));
 el.addTopupBtn.addEventListener('click', () => openTopupModal());
 el.topupOverlay.addEventListener('click', (e) => {
   if (e.target === el.topupOverlay) {
@@ -583,6 +729,15 @@ el.topupOverlay.addEventListener('click', (e) => {
 el.topupKrwInput.addEventListener('input', updateTopupPreview);
 el.topupIdrInput.addEventListener('input', updateTopupPreview);
 el.topupConfirmBtn.addEventListener('click', handleTopupConfirm);
+el.addWithdrawalBtn.addEventListener('click', () => openWithdrawalModal());
+el.withdrawalOverlay.addEventListener('click', (e) => {
+  if (e.target === el.withdrawalOverlay) {
+    el.withdrawalOverlay.hidden = true;
+    editingWithdrawalId = null;
+  }
+});
+el.withdrawalIdrInput.addEventListener('input', updateWithdrawalConfirmState);
+el.withdrawalConfirmBtn.addEventListener('click', handleWithdrawalConfirm);
 el.showAllToggle.addEventListener('change', (e) => {
   showAllDates = e.target.checked;
   renderLedger();
