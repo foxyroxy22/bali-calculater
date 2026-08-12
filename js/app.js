@@ -573,7 +573,7 @@ el.addItemBtn.addEventListener('click', () => {
   recalcAndRenderTotals();
 });
 el.saveBtn.addEventListener('click', handleSaveEntry);
-el.addTopupBtn.addEventListener('click', openTopupModal);
+el.addTopupBtn.addEventListener('click', () => openTopupModal());
 el.topupOverlay.addEventListener('click', (e) => {
   if (e.target === el.topupOverlay) {
     el.topupOverlay.hidden = true;
