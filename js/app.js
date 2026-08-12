@@ -221,6 +221,7 @@ function resetCalculatorDraft() {
   editingEntryId = null;
   el.taxModeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === 'none'));
   el.paymentMethodButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.method === 'card'));
+  el.taxRateInput.disabled = true;
   el.serviceRateInput.disabled = true;
   el.memoInput.value = '';
   el.dateInput.value = todayDateStr();
@@ -257,6 +258,7 @@ function switchView(view) {
 function handleTaxModeChange(mode) {
   currentTaxMode = mode;
   el.taxModeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === mode));
+  el.taxRateInput.disabled = mode === 'none';
   el.serviceRateInput.disabled = mode !== 'plusplus';
   recalcAndRenderTotals();
 }
@@ -517,6 +519,7 @@ function loadEntryIntoCalculator(entry) {
   applyTabTheme(currentTab);
   el.taxModeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.mode === currentTaxMode));
   el.paymentMethodButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.method === currentPaymentMethod));
+  el.taxRateInput.disabled = currentTaxMode === 'none';
   el.serviceRateInput.disabled = currentTaxMode !== 'plusplus';
   el.taxRateInput.value = currentTaxRate;
   el.serviceRateInput.value = currentServiceRate;
@@ -765,6 +768,7 @@ el.exportSelectAllBtn.addEventListener('click', () => {
 el.exportConfirmBtn.addEventListener('click', handleExportConfirm);
 
 el.taxRateInput.value = currentTaxRate;
+el.taxRateInput.disabled = currentTaxMode === 'none';
 el.serviceRateInput.value = currentServiceRate;
 el.dateInput.value = todayDateStr();
 renderItemsList();
